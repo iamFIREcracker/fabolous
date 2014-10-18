@@ -3,6 +3,7 @@
 
 
 import sys
+from os.path import basename
 
 from fabric.api import cd
 from fabric.api import env
@@ -143,9 +144,25 @@ def dbpopulate():
 @task
 def papply():
     '''Apply Puppet manifest. Usable from other commands or the CLI.'''
-    require('appname', 'appport', 'servername', 'user')
+    require('appname', 'appport', 'servername', 'user',
+            'puppet_modulepath', 'puppet_file')
 
-    sdo('FACTER_APPNAME=%s FACTER_APPPORT=%s FACTER_SERVERNAME=%s FACTER_USER=%s puppet apply --modulepath=puppet/modules/ puppet/base.pp' % (env.appname, env.appport, env.servername, env.user))
+    run('mkdir -p %s' % '/tmp/puppet')
+    dest_puppet_modulepath = '/tmp/puppet/%s' % basename(env.puppet_modulepath)
+    dest_puppet_file = '/tmp/puppet/%s' % basename(env.puppet_file)
+
+    with cd(env.site_path):
+        put(env.puppet_modulepath, dest_puppet_modulepath)
+        put(env.puppet_file, dest_puppet_file)
+
+    cmd = ['FACTER_APPNAME=%s' % env.appname,
+           'FACTER_APPPORT=%s' % env.appport,
+           'FACTER_SERVERNAME=%s' % env.servername,
+           'FACTER_USER=%s' % env.user,
+           'puppet apply',
+           '--modulepath=%s' % dest_puppet_modulepath,
+           '%s' % dest_puppet_file]
+    sdo(' '.join(cmd))
 
 
 @task
