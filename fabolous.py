@@ -152,8 +152,8 @@ def papply():
     dest_puppet_file = '/tmp/puppet/%s' % basename(env.puppet_file)
 
     with cd(env.site_path):
-        put(env.puppet_modulepath, dest_puppet_modulepath)
-        put(env.puppet_file, dest_puppet_file)
+        put(env.puppet_modulepath, '/tmp/puppet')
+        put(env.puppet_file, '/tmp/puppet')
 
     cmd = ['FACTER_APPNAME=%s' % env.appname,
            'FACTER_APPPORT=%s' % env.appport,
@@ -163,6 +163,7 @@ def papply():
            '--modulepath=%s' % dest_puppet_modulepath,
            '%s' % dest_puppet_file]
     sdo(' '.join(cmd))
+    run('rm -rf %s' % '/tmp/puppet')
 
 
 @task
@@ -215,23 +216,6 @@ def rupdate():
     ''' Update the repository. '''
     cmd('hg pull -u')
     cmd('hg update %s' % (env.repo_branch,))
-
-
-@task
-def rtag():
-    '''Check which revision the site is at and update the local tag.
-
-    Useful if someone else has deployed (which makes your production/staging local
-    tag incorrect.
-    '''
-    require('site_path', provided_by=['prod', 'stag', 'dev'])
-    require('env_name', provided_by=['prod', 'stag', 'dev'])
-
-    with cd(env.site_path):
-        current = run('hg id --rev . --quiet').strip(' \n+')
-
-    local('hg tag --local --force %s --rev %s' % (env.env_name, current))
-
 
 
 @task
