@@ -65,6 +65,14 @@ def _sad():
 
 
 @task
+def ssh():
+    '''Print ssh command to log into remote host'''
+    with settings(warn_only=True):
+        local('ssh %(user)s@%(host)s' % dict(user=env.user,
+                                             host=env.hosts[0]))
+
+
+@task
 def cmd(cmd=""):
     '''Run a command in the site directory.  Usable from other commands or the CLI.'''
     require('site_path')
