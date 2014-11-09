@@ -188,7 +188,7 @@ def vcreate():
 @task
 def vupdate():
     '''Update the virtualenv.  Usable from other commands or from the CLI.'''
-    vcmd('python setup.py install')
+    vcmd('pip install -r requirements.txt')
 
 
 @task
