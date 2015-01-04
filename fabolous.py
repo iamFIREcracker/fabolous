@@ -89,15 +89,13 @@ def cmd(cmd=""):
 @task
 def sdo(cmd=""):
     '''Sudo a command in the site directory.  Usable from other commands or the CLI.'''
-    require('site_path')
 
     if not cmd:
         sys.stdout.write(cyan("Command to run: sudo "))
         cmd = raw_input().strip()
 
     if cmd:
-        with cd(env.site_path):
-            sudo(cmd)
+        sudo(cmd)
 
 
 @task
