@@ -68,8 +68,13 @@ def _sad():
 def ssh():
     '''Print ssh command to log into remote host'''
     with settings(warn_only=True):
-        local('ssh %(user)s@%(host)s' % dict(user=env.user,
-                                             host=env.hosts[0]))
+        cmd = 'ssh -p%(port)s %(user)s@%(host)s'
+        if env.key_filename is not None:
+            cmd += ' -i%(identity)s'
+        local(cmd % dict(port=env.port,
+                         user=env.user,
+                         host=env.hosts[0],
+                         identity=env.key_filename))
 
 
 @task
@@ -143,28 +148,18 @@ def dbupdate():
 
 
 @task
-def dbpopulate():
-    '''Populate the database with test fixtures.'''
-    vcmd('python -c "import app.db; app.db.populate_db()"')
-
-@task
 def papply():
     '''Apply Puppet manifest. Usable from other commands or the CLI.'''
-    require('appname', 'appport', 'servername', 'user',
-            'puppet_modulepath', 'puppet_file')
+    require('puppet_modulepath', 'puppet_file', 'puppet_env')
 
     run('mkdir -p %s' % '/tmp/puppet')
     dest_puppet_modulepath = '/tmp/puppet/%s' % basename(env.puppet_modulepath)
     dest_puppet_file = '/tmp/puppet/%s' % basename(env.puppet_file)
 
-    with cd(env.site_path):
-        put(env.puppet_modulepath, '/tmp/puppet')
-        put(env.puppet_file, '/tmp/puppet')
+    put(env.puppet_modulepath, '/tmp/puppet')
+    put(env.puppet_file, '/tmp/puppet')
 
-    cmd = ['FACTER_APPNAME=%s' % env.appname,
-           'FACTER_APPPORT=%s' % env.appport,
-           'FACTER_SERVERNAME=%s' % env.servername,
-           'FACTER_USER=%s' % env.user,
+    cmd = ['%s' % env.puppet_env,
            'puppet apply',
            '--modulepath=%s' % dest_puppet_modulepath,
            '%s' % dest_puppet_file]
@@ -192,18 +187,14 @@ def vupdate():
 @task
 def check():
     '''Check that the home page of the site returns an HTTP 200.'''
-    require('site_url')
-
-    print('Checking site status...')
+    require('check_command')
 
     with settings(warn_only=True):
-        command = 'curl --silent --insecure -I -H "Host: %s" "%s"' % \
-                (env.servername, env.site_url)
-        result = local(command, capture=True)
-    if not '200 OK' in result:
-        _sad()
-    else:
-        _happy()
+        result = run(env.check_command)
+        if result.return_code == 0:
+            _happy()
+        else:
+            _sad()
 
 
 @task
@@ -234,21 +225,3 @@ def prerequisites():
 @task
 def i18nupdate():
     cmd('./make_strings.sh')
-
-
-
-@task
-def pull_uploads():
-    '''Copy the uploads from the site to your local machine.'''
-    require('uploads_path')
-
-    sudo('chmod -R a+r "%s"' % env.uploads_path)
-
-    rsync_command = r"""rsync -av -e 'ssh -p %s' %s@%s:%s %s""" % (
-        env.port,
-        env.user, env.host,
-        env.uploads_path.rstrip('/') + '/',
-        'static/uploads'
-    )
-    print local(rsync_command, capture=False)
-
