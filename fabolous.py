@@ -148,22 +148,32 @@ def dbupdate():
 
 
 @task
-def papply():
-    '''Apply Puppet manifest. Usable from other commands or the CLI.'''
-    require('puppet_modulepath', 'puppet_file', 'puppet_env')
+def pprepare():
+    require('puppet_modulepath')
 
     run('mkdir -p %s' % '/tmp/puppet')
+    put(env.puppet_modulepath, '/tmp/puppet')
+
+
+@task
+def papply():
+    '''Apply Puppet manifest. Usable from other commands or the CLI.'''
+    require('puppet_file', 'puppet_modulepath', 'puppet_env')
+
+    put(env.puppet_file, '/tmp/puppet')
+
     dest_puppet_modulepath = '/tmp/puppet/%s' % basename(env.puppet_modulepath)
     dest_puppet_file = '/tmp/puppet/%s' % basename(env.puppet_file)
-
-    put(env.puppet_modulepath, '/tmp/puppet')
-    put(env.puppet_file, '/tmp/puppet')
 
     cmd = ['%s' % env.puppet_env,
            'puppet apply',
            '--modulepath=%s' % dest_puppet_modulepath,
            '%s' % dest_puppet_file]
     sdo(' '.join(cmd))
+
+
+@task
+def pcleanup():
     run('rm -rf %s' % '/tmp/puppet')
 
 
